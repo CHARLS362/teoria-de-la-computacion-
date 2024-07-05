@@ -1,180 +1,182 @@
 import re
-import tkinter as tk
-from tkinter import font as tkfont
 
-class ASTNode:
+
+class NodoAST:
     pass
 
-class BinOp(ASTNode):
-    def __init__(self, left, op, right):
-        self.left = left
-        self.op = op
-        self.right = right
+class OperacionBinaria(NodoAST):
+    def __init__(self, izquierda, operacion, derecha):
+        self.izquierda = izquierda
+        self.operacion = operacion
+        self.derecha = derecha
 
-class Num(ASTNode):
-    def __init__(self, value):
-        self.value = value
+class Numero(NodoAST):
+    def __init__(self, valor):
+        self.valor = valor
 
-class Var(ASTNode):
-    def __init__(self, name):
-        self.name = name
+class Variable(NodoAST):
+    def __init__(self, nombre):
+        self.nombre = nombre
 
-class Assign(ASTNode):
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
+class Asignacion(NodoAST):
+    def __init__(self, nombre, valor):
+        self.nombre = nombre
+        self.valor = valor
 
-class Print(ASTNode):
-    def __init__(self, expr):
-        self.expr = expr
-
-
+class Imprimir(NodoAST):
+    def __init__(self, expresion):
+        self.expresion = expresion
 
 
-class Parser:
-    def __init__(self, input):
-        self.input = input
-        self.pos = 0
-        self.current_char = self.input[self.pos] if self.input else None
+
+
+class Analizador:
+    def __init__(self, entrada):
+        self.entrada = entrada
+        self.posicion = 0
+        self.caracter_actual = self.entrada[self.posicion] if self.entrada else None
         self.variables = {}
 
     def error(self):
         raise Exception('Error de sintaxis')
 
-    def advance(self):
-        self.pos += 1
-        self.current_char = self.input[self.pos] if self.pos < len(self.input) else None
+    def avanzar(self):
+        self.posicion += 1
+        self.caracter_actual = self.entrada[self.posicion] if self.posicion < len(self.entrada) else None
 
-    def skip_whitespace(self):
-        while self.current_char is not None and self.current_char.isspace():
-            self.advance()
+    def omitir_espacios(self):
+        while self.caracter_actual is not None and self.caracter_actual.isspace():
+            self.avanzar()
 
-    def number(self):
-        result = ''
-        while self.current_char is not None and self.current_char.isdigit():
-            result += self.current_char
-            self.advance()
-        return Num(float(result))
+    def numero(self):
+        resultado = ''
+        while self.caracter_actual is not None and self.caracter_actual.isdigit():
+            resultado += self.caracter_actual
+            self.avanzar()
+        return Numero(float(resultado))
 
     def factor(self):
-        self.skip_whitespace()
-        if self.current_char.isdigit():
-            return self.number()
-        elif self.current_char.isalpha():
+        self.omitir_espacios()
+        if self.caracter_actual.isdigit():
+            return self.numero()
+        elif self.caracter_actual.isalpha():
             return self.variable()
-        elif self.current_char == '(':
-            self.advance()
-            node = self.expr()
-            if self.current_char == ')':
-                self.advance()
-                return node
+        elif self.caracter_actual == '(':
+            self.avanzar()
+            nodo = self.expresion()
+            if self.caracter_actual == ')':
+                self.avanzar()
+                return nodo
             else:
                 self.error()
         else:
             self.error()
 
-    def term(self):
-        node = self.factor()
-        while self.current_char is not None and self.current_char in ('*', '/'):
-            op = self.current_char
-            self.advance()
-            node = BinOp(left=node, op=op, right=self.factor())
-        return node
+    def termino(self):
+        nodo = self.factor()
+        while self.caracter_actual is not None and self.caracter_actual in ('*', '/'):
+            operacion = self.caracter_actual
+            self.avanzar()
+            nodo = OperacionBinaria(izquierda=nodo, operacion=operacion, derecha=self.factor())
+        return nodo
 
-    def expr(self):
-        node = self.term()
-        while self.current_char is not None and self.current_char in ('+', '-'):
-            op = self.current_char
-            self.advance()
-            node = BinOp(left=node, op=op, right=self.term())
-        return node
+    def expresion(self):
+        nodo = self.termino()
+        while self.caracter_actual is not None and self.caracter_actual in ('+', '-'):
+            operacion = self.caracter_actual
+            self.avanzar()
+            nodo = OperacionBinaria(izquierda=nodo, operacion=operacion, derecha=self.termino())
+        return nodo
 
     def variable(self):
-        result = ''
-        while self.current_char is not None and self.current_char.isalnum():
-            result += self.current_char
-            self.advance()
-        return Var(result)
+        resultado = ''
+        while self.caracter_actual is not None and self.caracter_actual.isalnum():
+            resultado += self.caracter_actual
+            self.avanzar()
+        return Variable(resultado)
 
-    def assignment(self):
+    def asignacion(self):
         var = self.variable()
-        self.skip_whitespace()
-        if self.current_char == '=':
-            self.advance()
-            value = self.expr()
-            return Assign(var.name, value)
+        self.omitir_espacios()
+        if self.caracter_actual == '=':
+            self.avanzar()
+            valor = self.expresion()
+            return Asignacion(var.nombre, valor)
         else:
             self.error()
 
-    def statement(self):
-        self.skip_whitespace()
-        if self.current_char.isalpha():
+    def sentencia(self):
+        self.omitir_espacios()
+        if self.caracter_actual.isalpha():
             var = self.variable()
-            self.skip_whitespace()
-            if self.current_char == '=':
-                self.advance()
-                value = self.expr()
-                self.skip_whitespace()
-                if self.current_char == ';':
-                    self.advance()
-                    return Assign(var.name, value)
+            self.omitir_espacios()
+            if self.caracter_actual == '=':
+                self.avanzar()
+                valor = self.expresion()
+                self.omitir_espacios()
+                if self.caracter_actual == ';':
+                    self.avanzar()
+                    return Asignacion(var.nombre, valor)
                 else:
                     self.error()
-            elif var.name == "print":
-                expr = self.expr()
-                self.skip_whitespace()
-                if self.current_char == ';':
-                    self.advance()
-                    return Print(expr)
+            elif var.nombre == "print":
+                expr = self.expresion()
+                self.omitir_espacios()
+                if self.caracter_actual == ';':
+                    self.avanzar()
+                    return Imprimir(expr)
                 else:
                     self.error()
         self.error()
 
-    def parse(self):
-        nodes = []
-        while self.current_char is not None:
-            node = self.statement()
-            if node is not None:
-                nodes.append(node)
-            self.skip_whitespace()
-        return nodes
+    def parsear(self):
+        nodos = []
+        while self.caracter_actual is not None:
+            nodo = self.sentencia()
+            if nodo is not None:
+                nodos.append(nodo)
+            self.omitir_espacios()
+        return nodos
 
-class Evaluator:
+class Evaluador:
     def __init__(self):
         self.variables = {}
 
-    def visit(self, node):
-        if isinstance(node, Num):
-            return node.value
-        elif isinstance(node, Var):
-            return self.variables.get(node.name, 0)
-        elif isinstance(node, BinOp):
-            left = self.visit(node.left)
-            right = self.visit(node.right)
-            if node.op == '+':
-                return left + right
-            elif node.op == '-':
-                return left - right
-            elif node.op == '*':
-                return left * right
-            elif node.op == '/':
-                return left / right
-        elif isinstance(node, Assign):
-            value = self.visit(node.value)
-            self.variables[node.name] = value
-            return value
-        elif isinstance(node, Print):
-            value = self.visit(node.expr)
-            print(value)
-            return value
+    def visitar(self, nodo):
+        if isinstance(nodo, Numero):
+            return nodo.valor
+        elif isinstance(nodo, Variable):
+            return self.variables.get(nodo.nombre, 0)
+        elif isinstance(nodo, OperacionBinaria):
+            izquierda = self.visitar(nodo.izquierda)
+            derecha = self.visitar(nodo.derecha)
+            if nodo.operacion == '+':
+                return izquierda + derecha
+            elif nodo.operacion == '-':
+                return izquierda - derecha
+            elif nodo.operacion == '*':
+                return izquierda * derecha
+            elif nodo.operacion == '/':
+                return izquierda / derecha
+        elif isinstance(nodo, Asignacion):
+            valor = self.visitar(nodo.valor)
+            self.variables[nodo.nombre] = valor
+            return valor
+        elif isinstance(nodo, Imprimir):
+            valor = self.visitar(nodo.expresion)
+            return valor
 
-    def evaluate(self, nodes):
-        results = []
-        for node in nodes:
-            result = self.visit(node)
-            results.append(result)
-        return results
+    def evaluar(self, nodos):
+        resultados = []
+        for nodo in nodos:
+            resultado = self.visitar(nodo)
+            if isinstance(nodo, Imprimir):
+                resultados.append(resultado)
+        return resultados
 
+
+import tkinter as tk
+from tkinter import font as tkfont
 
 class Aplicacion(tk.Frame):
     def __init__(self, master=None):
@@ -238,10 +240,10 @@ class Aplicacion(tk.Frame):
         )
 
         try:
-            parser = Parser(codigo)
-            nodes = parser.parse()
-            evaluator = Evaluator()
-            resultados = evaluator.evaluate(nodes)
+            parser = Analizador(codigo)
+            nodos = parser.parsear()
+            evaluador = Evaluador()
+            resultados = evaluador.evaluar(nodos)
 
             self.output_text.delete('1.0', tk.END)
             for resultado in resultados:
